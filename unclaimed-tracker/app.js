@@ -20,6 +20,9 @@
     pro: ""     // e.g. "https://buy.stripe.com/yyyyyyyy"
   };
 
+  // Server-side Stripe Checkout (Supabase Edge Function). Host-independent.
+  var CHECKOUT_URL = "https://vfvhbsexwkceiiljutch.supabase.co/functions/v1/checkout";
+
   var STORE_KEY = "claimtrail.v1";
   var STATUSES = ["found", "filing", "submitted", "paid"];
   var STATUS_LABEL = { found: "Found", filing: "Filing", submitted: "Submitted", paid: "Paid" };
@@ -114,7 +117,7 @@
   // 1) Try the serverless Checkout Session. 2) Fall back to a Payment Link.
   // 3) Fall back to demo mode (unlock locally, no charge).
   function startCheckout(plan) {
-    fetch("/api/create-checkout-session", {
+    fetch(CHECKOUT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan: plan })
