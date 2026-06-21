@@ -7,6 +7,19 @@
 (function () {
   "use strict";
 
+  /* ---------- payments config ----------
+   * Two ways to charge, in priority order:
+   *   1. Serverless Stripe Checkout at /api/create-checkout-session (best).
+   *      Set STRIPE_SECRET_KEY + price IDs in your Vercel project env.
+   *   2. Stripe Payment Links — paste the URLs below for a zero-backend setup.
+   *      Create them at https://dashboard.stripe.com/payment-links and set the
+   *      "after payment" redirect to:  https://YOURSITE/?checkout=success&plan=family
+   * If neither is configured the buttons run in demo mode (no charge). */
+  var PAYMENT_LINKS = {
+    family: "", // e.g. "https://buy.stripe.com/xxxxxxxx"
+    pro: ""     // e.g. "https://buy.stripe.com/yyyyyyyy"
+  };
+
   var STORE_KEY = "claimtrail.v1";
   var STATUSES = ["found", "filing", "submitted", "paid"];
   var STATUS_LABEL = { found: "Found", filing: "Filing", submitted: "Submitted", paid: "Paid" };
@@ -71,14 +84,64 @@
   // Deep-link straight to the app via #app
   if (location.hash === "#app") showApp();
 
+  // Handle return from Stripe Checkout: ?checkout=success&plan=family
+  handleCheckoutReturn();
+
+  function handleCheckoutReturn() {
+    var params = new URLSearchParams(location.search);
+    var status = params.get("checkout");
+    if (!status) return;
+    if (status === "success") {
+      var plan = params.get("plan") || "family";
+      state.plan = plan;
+      save();
+      showApp();
+      setTimeout(function () {
+        alert("🎉 Payment received — your " + plan.toUpperCase() + " plan is active. Add your whole family below.");
+      }, 50);
+    } else if (status === "cancel") {
+      setTimeout(function () { alert("Checkout canceled — no charge was made."); }, 50);
+    }
+    // Clean the URL so a refresh doesn't re-trigger.
+    history.replaceState({}, document.title, location.pathname + location.hash);
+  }
+
   function choosePlan(plan) {
-    // In production this is where you'd open Stripe Checkout (see README).
-    // For the demo we simply record the chosen plan locally.
+    if (plan === "free") { state.plan = "free"; save(); return; }
+    startCheckout(plan);
+  }
+
+  // 1) Try the serverless Checkout Session. 2) Fall back to a Payment Link.
+  // 3) Fall back to demo mode (unlock locally, no charge).
+  function startCheckout(plan) {
+    fetch("/api/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: plan })
+    }).then(function (r) {
+      return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+    }).then(function (res) {
+      if (res.ok && res.data && res.data.url) {
+        window.location.href = res.data.url; // off to Stripe Checkout
+      } else {
+        fallbackCheckout(plan);
+      }
+    }).catch(function () {
+      fallbackCheckout(plan);
+    });
+  }
+
+  function fallbackCheckout(plan) {
+    var link = PAYMENT_LINKS[plan];
+    if (link) {
+      window.location.href = link; // Stripe Payment Link
+      return;
+    }
+    // Demo mode — no payments configured yet.
     state.plan = plan;
     save();
-    if (plan !== "free") {
-      alert("Demo mode: '" + plan + "' plan selected. Wire Stripe Checkout here to charge for real (see README.md).");
-    }
+    render();
+    alert("Demo mode: '" + plan + "' unlocked locally (no charge).\n\nTo charge for real, set STRIPE_SECRET_KEY + price IDs in Vercel, or paste a Payment Link in app.js. See README.md.");
   }
 
   /* ---------- people ---------- */
