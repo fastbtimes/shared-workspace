@@ -32,9 +32,8 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          # Auto-enable Pages (Actions build type) so no manual settings toggle is needed.
-          enablement: true
+        # Pages must be enabled once in repo Settings (Source = GitHub Actions).
+        # We do NOT auto-create here, because the Actions token isn't permitted to.
 
       - name: Upload static site (the app folder only)
         uses: actions/upload-pages-artifact@v3
