@@ -1,5 +1,6 @@
 name: Deploy ClaimTrail to GitHub Pages
 
+# Pages enabled in repo settings; re-trigger after enablement.
 on:
   push:
     branches:
