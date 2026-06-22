@@ -8,20 +8,28 @@
   "use strict";
 
   /* ---------- payments config ----------
-   * Two ways to charge, in priority order:
-   *   1. Serverless Stripe Checkout at /api/create-checkout-session (best).
-   *      Set STRIPE_SECRET_KEY + price IDs in your Vercel project env.
-   *   2. Stripe Payment Links — paste the URLs below for a zero-backend setup.
-   *      Create them at https://dashboard.stripe.com/payment-links and set the
-   *      "after payment" redirect to:  https://YOURSITE/?checkout=success&plan=family
-   * If neither is configured the buttons run in demo mode (no charge). */
+   * Stripe path (priority):
+   *   CHECKOUT_URL hits the Supabase Edge Function which calls Stripe server-side.
+   *   Fallback: paste Stripe Payment Links below.
+   * PayPal path:
+   *   Create PayPal subscription plans at paypal.com/billing/plans, copy the
+   *   "Subscribe" link, and paste below. Set the return URL to:
+   *   https://YOURSITE/?checkout=success&plan=family  (or plan=pro)
+   * If nothing is configured, buttons unlock locally in demo mode (no charge). */
+
+  // Server-side Stripe Checkout (Supabase Edge Function). Host-independent.
+  var CHECKOUT_URL = "https://vfvhbsexwkceiiljutch.supabase.co/functions/v1/checkout";
+
   var PAYMENT_LINKS = {
     family: "", // e.g. "https://buy.stripe.com/xxxxxxxx"
     pro: ""     // e.g. "https://buy.stripe.com/yyyyyyyy"
   };
 
-  // Server-side Stripe Checkout (Supabase Edge Function). Host-independent.
-  var CHECKOUT_URL = "https://vfvhbsexwkceiiljutch.supabase.co/functions/v1/checkout";
+  // PayPal subscription links — paste from your PayPal Business dashboard.
+  var PAYPAL_LINKS = {
+    family: "", // e.g. "https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-XXXXXXXX"
+    pro: ""     // e.g. "https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-YYYYYYYY"
+  };
 
   var STORE_KEY = "claimtrail.v1";
   var STATUSES = ["found", "filing", "submitted", "paid"];
@@ -111,12 +119,51 @@
 
   function choosePlan(plan) {
     if (plan === "free") { state.plan = "free"; save(); return; }
-    startCheckout(plan);
+    showPaymentPicker(plan);
+  }
+
+  /* ---------- payment-method picker modal ---------- */
+  function showPaymentPicker(plan) {
+    var existing = document.getElementById("payPickerModal");
+    if (existing) existing.remove();
+
+    var label = plan === "family" ? "Family — $9/mo" : "Pro / Estates — $29/mo";
+    var hasPayPal = !!PAYPAL_LINKS[plan];
+
+    var modal = document.createElement("div");
+    modal.id = "payPickerModal";
+    modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999";
+
+    modal.innerHTML =
+      '<div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2rem;max-width:360px;width:90%;text-align:center">' +
+        '<h3 style="color:#f1f5f9;margin:0 0 .5rem">Choose payment method</h3>' +
+        '<p style="color:#94a3b8;font-size:.9rem;margin:0 0 1.5rem">' + label + '</p>' +
+        '<button id="ppStripe" style="width:100%;padding:.75rem;margin-bottom:.75rem;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer">💳 Pay with Card (Stripe)</button>' +
+        (hasPayPal
+          ? '<button id="ppPayPal" style="width:100%;padding:.75rem;margin-bottom:.75rem;background:#ffc439;color:#003087;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer">🅿 Pay with PayPal</button>'
+          : '<button disabled style="width:100%;padding:.75rem;margin-bottom:.75rem;background:#334155;color:#64748b;border:none;border-radius:8px;font-size:.9rem;cursor:not-allowed">PayPal (coming soon)</button>') +
+        '<br><button id="ppCancel" style="color:#94a3b8;background:none;border:none;cursor:pointer;font-size:.9rem;margin-top:.25rem">Cancel</button>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    document.getElementById("ppStripe").addEventListener("click", function () {
+      modal.remove();
+      startStripeCheckout(plan);
+    });
+    if (hasPayPal) {
+      document.getElementById("ppPayPal").addEventListener("click", function () {
+        modal.remove();
+        window.location.href = PAYPAL_LINKS[plan];
+      });
+    }
+    document.getElementById("ppCancel").addEventListener("click", function () { modal.remove(); });
+    modal.addEventListener("click", function (e) { if (e.target === modal) modal.remove(); });
   }
 
   // 1) Try the serverless Checkout Session. 2) Fall back to a Payment Link.
   // 3) Fall back to demo mode (unlock locally, no charge).
-  function startCheckout(plan) {
+  function startStripeCheckout(plan) {
     fetch(CHECKOUT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -125,26 +172,25 @@
       return r.json().then(function (data) { return { ok: r.ok, data: data }; });
     }).then(function (res) {
       if (res.ok && res.data && res.data.url) {
-        window.location.href = res.data.url; // off to Stripe Checkout
+        window.location.href = res.data.url;
       } else {
-        fallbackCheckout(plan);
+        fallbackStripeCheckout(plan);
       }
     }).catch(function () {
-      fallbackCheckout(plan);
+      fallbackStripeCheckout(plan);
     });
   }
 
-  function fallbackCheckout(plan) {
+  function fallbackStripeCheckout(plan) {
     var link = PAYMENT_LINKS[plan];
     if (link) {
-      window.location.href = link; // Stripe Payment Link
+      window.location.href = link;
       return;
     }
-    // Demo mode — no payments configured yet.
     state.plan = plan;
     save();
     render();
-    alert("Demo mode: '" + plan + "' unlocked locally (no charge).\n\nTo charge for real, set STRIPE_SECRET_KEY + price IDs in Vercel, or paste a Payment Link in app.js. See README.md.");
+    alert("Demo mode: '" + plan + "' unlocked locally (no charge).\n\nTo go live: add STRIPE_SECRET_KEY to Supabase secrets, or paste PayPal subscription links into PAYPAL_LINKS in app.js.");
   }
 
   /* ---------- people ---------- */
