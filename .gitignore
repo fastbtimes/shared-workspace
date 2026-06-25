@@ -1,0 +1,10 @@
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# VoxCPM local model cache / generated audio
+pretrained_models/
+*.wav
+scratch_*.py
+scratch_*.wav
