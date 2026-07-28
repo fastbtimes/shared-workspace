@@ -7,8 +7,8 @@ Run `claude` from inside `hotmart-course-export/` and paste this.
 ## If the export already ran
 
 > I've exported a Hotmart course I bought into `export/` in this directory —
-> "Sol na Placa", a Brazilian course on off-grid photovoltaic solar by Moisés.
-> The videos are in Portuguese.
+> "GERE SUA PRÓPRIA ENERGIA" by MOISES SOL NA PLACA, a Brazilian course on off-grid
+> photovoltaic solar. The videos are in Portuguese.
 >
 > `export/course_map.json` has the lesson list in course order. Lessons are in
 > `export/video/`, and any caption tracks are in `export/subtitles/`.

@@ -5,8 +5,17 @@ can be transcribed and summarized. The remote Claude Code container can't reach
 Hotmart Club (403 — no session, no cookies, no Hotmart connector), so this runs
 where you're already logged in.
 
-Built for: `hotmart.com/en/club/solnaplaca/products/1193151` — "Sol na Placa",
-off-grid solar, by Moisés.
+Built for: **GERE SUA PRÓPRIA ENERGIA** by MOISES SOL NA PLACA —
+`hotmart.com/en/club/solnaplaca/products/1193151`. Portuguese, off-grid solar.
+(`solnaplaca` is the producer's members-area slug, not the course title.)
+
+## Before anything else: set your Hotmart password
+
+The purchase confirmation says you're a **new Hotmart user** and still need to set a
+password. Until you do, there is no account to log into and none of this works. Open
+the email titled *"Here's your access to course GERE SUA PRÓPRIA ENERGIA!"* from
+`noreply@hotmart.com` and click **Set password and access content**. Log in once in a
+normal browser and confirm you can play a lesson, then continue below.
 
 ## Scope
 
