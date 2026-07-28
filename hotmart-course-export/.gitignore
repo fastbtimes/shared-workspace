@@ -1,0 +1,11 @@
+# Browser session — contains your Hotmart login cookies. Never commit.
+browser-profile/
+
+# Exported course material — yours, and large.
+export/
+notes/
+transcripts/
+SUMMARY.md
+
+.venv/
+__pycache__/
